@@ -1,12 +1,14 @@
 #pragma once
 
 #include "byte_stream.hh"
+#include <cstdint>
+#include <map>
 
 class Reassembler
 {
 public:
   // Construct Reassembler to write into given ByteStream.
-  explicit Reassembler( ByteStream&& output ) : output_( std::move( output ) ) {}
+  explicit Reassembler( ByteStream&& output ) : cache(), output_( std::move( output ) ) {}
 
   /*
    * Insert a new substring to be reassembled into a ByteStream.
@@ -28,6 +30,14 @@ public:
    *
    * The Reassembler should close the stream after writing the last byte.
    */
+
+  uint64_t first_unpopped_idx();
+  uint64_t first_unassembled_idx();
+  uint64_t first_unaccepted_idx();
+
+  void split(uint64_t &first_idx, std::string &data);
+  void merge(uint64_t &a_idx, std::string &a_data, uint64_t b_idx, std::string b_data);
+  void insert_into_cache(uint64_t first_idx, std::string data, bool is_last_substring);
   void insert( uint64_t first_index, std::string data, bool is_last_substring );
 
   // How many bytes are stored in the Reassembler itself?
@@ -41,5 +51,9 @@ public:
   const Writer& writer() const { return output_.writer(); }
 
 private:
+  std::map<uint64_t, std::string> cache;
+  uint64_t num_bytes_stored {0};
+  bool end_idx_valid {false}; // 收到 last_substring 之后置为 true
+
   ByteStream output_; // the Reassembler writes to this ByteStream
 };
